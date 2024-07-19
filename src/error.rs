@@ -18,7 +18,7 @@ pub enum Problem {
     BinaryEncodeError(rbx_binary::EncodeError),
     #[error("While attempting to decode the place file, at {0} rbx_xml didn't know what to do")]
     XMLEncodeError(rbx_xml::EncodeError),
-    #[error("File {} does not have the correct rbx file extension", .0.file_name().and_then(|name| name.to_str()).unwrap_or("None"))]
+    #[error("File '{}' does not have the correct rbx file extension", .0.file_name().and_then(|name| name.to_str()).unwrap_or("None"))]
     InvalidExtension(PathBuf),
     #[error("While searching through file, no source script was found")]
     NoMainSource,

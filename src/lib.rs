@@ -199,11 +199,7 @@ fn wrap_main_source(ast: Ast) -> String {
 pub struct DomTranspiler {
     tree: WeakDom,
     source_script: Ref,
-}
-
-/// Check if path could be a library that does not require plugin access
-fn lib_exclude(p: &str) -> bool {
-    glob_match("**/[Rr][eo]act*/**", p) || glob_match("**/*jsdotlua*/**", p) || glob_match("**/Fusion/**", p)
+    exclude_libs: bool,
 }
 
 impl DomTranspiler {
@@ -216,7 +212,38 @@ impl DomTranspiler {
             )
             .ok_or(Problem::NoMainSource)?;
 
-        Ok(Self { tree, source_script })
+        Ok(Self {
+            tree,
+            source_script,
+            exclude_libs: true,
+        })
+    }
+
+    /// Controls the exclusion of standard libraries that typically don't need plugin access.
+    ///
+    /// * **Default: true** (libraries are excluded)
+    /// * Set to `false` to include all libraries, even standard ones.
+    ///
+    /// Use `false` if your plugin relies on a module that shares a name with
+    /// a standard library (like React or Fusion) and needs plugin-specific methods.
+    ///
+    /// # Affected libraries
+    ///
+    /// (also any descendants of the path to these libraries)
+    /// * React/Roact, jsdotlua descendants
+    /// * Fusion
+    ///
+    /// # Returns
+    /// `&mut Self` for method chaining
+    pub fn exclude_libs(&mut self, exclude_libs: bool) -> &mut Self {
+        self.exclude_libs = exclude_libs;
+        self
+    }
+
+    /// Check if path could be a library that does not require plugin access
+    fn is_excluded(&self, p: &str) -> bool {
+        self.exclude_libs
+            && (glob_match("**/[Rr][eo]act*/**", p) || glob_match("**/*jsdotlua*/**", p) || glob_match("**/Fusion/**", p))
     }
 
     /// Saves the edited dom to a file path
@@ -243,6 +270,9 @@ impl DomTranspiler {
     }
 
     /// Transpiles the entire dom tree, which can then be saved to a file
+    ///
+    /// # Returns
+    /// `Result<&mut Self, Problem>` for method chaining and error handling
     pub fn transpile_tree(&mut self) -> Result<&mut Self, Problem> {
         let now = Instant::now();
 
@@ -254,7 +284,7 @@ impl DomTranspiler {
             &mut |child, path| {
                 if child.class == "ModuleScript" {
                     total_count += 1;
-                    if !lib_exclude(&path.path_string()) {
+                    if !self.is_excluded(&path.path_string()) {
                         script_stack.push((child.referent(), path.depth()));
                     }
                 }

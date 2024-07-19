@@ -1,11 +1,13 @@
-use log::info;
-use rfd::FileDialog;
 use std::{
     fs,
     io::{self, Write},
     path::PathBuf,
     sync::{Arc, RwLock},
 };
+
+use clap::{Args, Parser, Subcommand};
+use log::info;
+use rfd::FileDialog;
 
 use pluginproxy_transpiler::{error::Problem, RbxFileType};
 
@@ -33,41 +35,75 @@ impl log::Log for WrappedLogger {
     fn flush(&self) {}
 }
 
+#[derive(Parser)]
+#[clap(author, version, about)]
+struct TranspilerCliArgs {
+    #[arg(short = 'i')]
+    input: Option<PathBuf>,
+
+    #[arg(value_name = "OUTPUT")]
+    output: Option<PathBuf>,
+
+    #[arg(long, visible_alias = "libs", action = clap::ArgAction::SetTrue)]
+    #[arg(help = r"Include all libraries, even non-plugin ones like React or Fusion.
+    Use this if the plugin depends on a module with the same name as a standard library
+    and requires plugin-specific methods.")]
+    include_libs: bool,
+
+    /// Disable saving logs to file
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    no_logs: bool,
+}
+
 fn routine(log_file: LogFile) -> Result<(), Problem> {
+    let cli = TranspilerCliArgs::parse();
+
     info!("PluginProxy Transpiler {}", env!("CARGO_PKG_VERSION"));
-
-    info!("Select a Roblox binary/xml file containing a plugin");
-    let file_path = match std::env::args().nth(1) {
-        Some(text) => PathBuf::from(text),
-        None => FileDialog::new()
-            .set_title("Select a Roblox binary/xml file containing a plugin")
-            .add_filter("Roblox", &["rbxm", "rbxl", "rbxmx", "rbxlx"])
-            .pick_file()
-            .ok_or(Problem::RFDCancel)?,
-    };
-
-    let file_dir = file_path.parent().ok_or(Problem::InvalidPath)?;
-
-    let log_file_name = "PluginProxy-Transpiler.log";
-    log_file
-        .write()
-        .unwrap()
-        .replace(fs::File::create(file_dir.join(log_file_name)).map_err(|error| Problem::IOError("create a log file", error))?);
-
-    let out_file = match std::env::args().nth(2) {
-        Some(text) => {
-            let path = PathBuf::from(text);
+    let in_file = match cli.input {
+        Some(path) => {
             RbxFileType::from_path(&path)?;
             path
         }
-        None => file_dir.join("out.rbxm"),
+        None => {
+            let msg = "Select a Roblox binary/xml file containing a plugin";
+            info!("{msg}");
+            FileDialog::new()
+                .set_title(msg)
+                .add_filter("Roblox", &["rbxm", "rbxl", "rbxmx", "rbxlx"])
+                .pick_file()
+                .ok_or(Problem::RFDCancel)?
+        }
     };
+    let input_dir = in_file.parent().ok_or(Problem::InvalidPath)?;
 
-    pluginproxy_transpiler::from_file(&file_path)?
+    let out_file = match cli.output {
+        Some(path) => {
+            RbxFileType::from_path(&path)?;
+            path
+        }
+        None => input_dir.join("out.rbxm"),
+    };
+    let output_dir = out_file.parent().ok_or(Problem::InvalidPath)?;
+
+    let log_file_name = "PluginProxy-Transpiler.log";
+    if !cli.no_logs {
+        log_file.write().unwrap().replace(
+            fs::File::create(output_dir.join(log_file_name)).map_err(|error| Problem::IOError("create a log file", error))?,
+        );
+    }
+
+    pluginproxy_transpiler::from_file(&in_file)?
+        .exclude_libs(!cli.include_libs)
         .transpile_tree()?
         .save_to_file(&out_file)?;
 
-    info!("Done! Check {log_file_name} for a full log");
+    let end_message = if !cli.no_logs {
+        format!(" Check {log_file_name} for a full log")
+    } else {
+        String::new()
+    };
+
+    info!("Done!{end_message}");
     Ok(())
 }
 
