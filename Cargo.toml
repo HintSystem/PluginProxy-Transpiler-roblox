@@ -22,7 +22,7 @@ rbx_reflection = { git = "https://github.com/rojo-rbx/rbx-dom/", branch = "maste
 rbx_dom_weak = { git = "https://github.com/rojo-rbx/rbx-dom/", branch = "master" }
 rbx_binary = { git = "https://github.com/rojo-rbx/rbx-dom/", branch = "master" }
 rbx_xml = { git = "https://github.com/rojo-rbx/rbx-dom/", branch = "master" }
-full_moon = { version = "1.0.0-rc", features = ["luau"] }
+full_moon = "1.0.0-rc"
 
 clap = { version = "4", features = ["derive"], optional = true }
 env_logger = { version = "0.11", optional = true }
@@ -36,5 +36,5 @@ opt-level = 3 # release optimization for debug to prevent stack overflow
 
 [features]
 default = ["luau"]
-luau = []
+luau = ["full_moon/luau"]
 cli = ["clap", "env_logger", "rfd"]

@@ -58,7 +58,7 @@ fn is_replacable_enum<T: HasAffixes>(node: &T) -> bool {
             .suffixes()
             .next()
             .and_then(|s| s.identifier())
-            .is_some_and(|i| matches!(i, "StudioStyleGuideColor" | "StudioStyleGuideModifier"))
+            .is_some_and(|i| matches!(i, "StudioStyleGuideColor" | "StudioStyleGuideModifier" | "UITheme"))
 }
 
 fn is_settings_call<T: HasAffixes>(node: &T) -> bool {

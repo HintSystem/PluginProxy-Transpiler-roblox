@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
 use log::info;
 use rfd::FileDialog;
 

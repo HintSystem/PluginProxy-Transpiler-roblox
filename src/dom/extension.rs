@@ -181,6 +181,14 @@ impl WeakDomExt for WeakDom {
     }
 }
 
+pub trait TokenRefExt {
+    fn new_type(token: TokenType) -> TokenReference;
+    fn new_identifier(identifier: &str) -> TokenReference;
+    fn with_trivia(&self, leading_whitespace: Option<&str>, trailing_whitespace: Option<&str>) -> TokenReference;
+    /// Gets string from TokenReference if contains a identifier or string
+    fn identifier(&self) -> Option<&str>;
+}
+
 /// Creates new trivia for TokenReference if a string is provided
 fn trivia(whitespace: Option<&str>) -> Vec<Token> {
     match whitespace {
@@ -189,14 +197,6 @@ fn trivia(whitespace: Option<&str>) -> Vec<Token> {
         })],
         None => Vec::new(),
     }
-}
-
-pub trait TokenRefExt {
-    fn new_type(token: TokenType) -> TokenReference;
-    fn new_identifier(identifier: &str) -> TokenReference;
-    fn with_trivia(&self, leading_whitespace: Option<&str>, trailing_whitespace: Option<&str>) -> TokenReference;
-    /// Gets string from TokenReference if contains a identifier or string
-    fn identifier(&self) -> Option<&str>;
 }
 
 impl TokenRefExt for TokenReference {
